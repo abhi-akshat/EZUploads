@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from utils import verify_password, create_access_token
 from db.database import get_db
 from db.models import User
+import aws
 import os
 
 router = APIRouter()
@@ -32,20 +33,28 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
-    
+    try:
+        await aws.upload_file(file.filename, file.file)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
     return {"info": f"File '{file.filename}' uploaded successfully"}
 
 @router.get("/files")
 async def list_files(db: Session = Depends(get_db)):
-    files = os.listdir("uploads")
-    return {"files": files}
+    try:
+        files = await aws.getAllFiles()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return files
+
 
 @router.delete("/delete-file/{fileid}")
 async def delete_file(fileid: str, db: Session = Depends(get_db)):
-    file_path = os.path.join("uploads", fileid)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        return {"message": f"File '{fileid}' deleted successfully"}
-    else:
-        raise HTTPException(status_code=404, detail="File not found")
+    try:
+        files = await aws.deleteFile(fileid)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return files
