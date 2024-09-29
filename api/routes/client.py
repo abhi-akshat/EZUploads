@@ -4,13 +4,13 @@ from sqlalchemy.orm import Session
 from utils import hash_password, create_access_token, get_file_download_link, verify_password
 from db.database import get_db
 from db.models import User
+import aws
 import os
 import uuid
 from pydantic import BaseModel
 
 router = APIRouter()
 
-# Pydantic model for signup request
 class SignupRequest(BaseModel):
     username: str
     password: str
@@ -45,9 +45,19 @@ async def client_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Ses
 
 @router.get("/files")
 async def list_files(db: Session = Depends(get_db)):
+    try:
+        files = await aws.getAllFiles()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return files
 
-    return {"files": []}
 
 @router.get("/download-file/{filename}")
 async def download_file(filename: str, db: Session = Depends(get_db)):
-    return {"message": "File download link generated"}
+    try:
+        link = await aws.downloadFile(filename)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"download-link": f"{link}", "message": "sucess"}
