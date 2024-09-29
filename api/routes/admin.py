@@ -21,7 +21,7 @@ async def admin_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Sess
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/upload-file")
+@router.post("/upload")
 async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
     allowed_types = [
         "application/vnd.openxmlformats-officedocument.presentationml.presentation", 
@@ -32,22 +32,20 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
-    file_location = f"uploads/{file.filename}"
-    with open(file_location, "wb+") as file_object:
-        file_object.write(file.file.read())
+    
     
     return {"info": f"File '{file.filename}' uploaded successfully"}
 
-@router.get("/list-files")
+@router.get("/files")
 async def list_files(db: Session = Depends(get_db)):
     files = os.listdir("uploads")
     return {"files": files}
 
-@router.delete("/delete-file/{filename}")
-async def delete_file(filename: str, db: Session = Depends(get_db)):
-    file_path = os.path.join("uploads", filename)
+@router.delete("/delete-file/{fileid}")
+async def delete_file(fileid: str, db: Session = Depends(get_db)):
+    file_path = os.path.join("uploads", fileid)
     if os.path.exists(file_path):
         os.remove(file_path)
-        return {"message": f"File '{filename}' deleted successfully"}
+        return {"message": f"File '{fileid}' deleted successfully"}
     else:
         raise HTTPException(status_code=404, detail="File not found")
